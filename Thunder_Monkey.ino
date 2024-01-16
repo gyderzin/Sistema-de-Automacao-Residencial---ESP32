@@ -7,7 +7,7 @@
 #include <WiFiUdp.h>
 #include <TimeLib.h>
 
-const char* baseUrl = "http://192.168.100.87/API-ThuderMonkey/public/api";
+const char* baseUrl = "http://192.168.100.89/API-ThuderMonkey/public/api";
 const char* ssid = "OI FIBRA 4955";
 const char* senha = "30140402asd*";
 
@@ -110,7 +110,7 @@ void setup() {
     http.end();
   }
 
-  timeClient.setTimeOffset(-3 * 60 * 60);
+  timeClient.setTimeOffset(-4 * 60 * 60);
   timeClient.begin();
 }
 
