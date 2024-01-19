@@ -3,6 +3,7 @@
 #include <ArduinoJson.h>
 #include <IRremoteESP8266.h>
 #include <IRsend.h>
+#include <ir_Gree.h>
 #include <NTPClient.h>
 #include <WiFiUdp.h>
 #include <TimeLib.h>
@@ -10,6 +11,8 @@
 const char* baseUrl = "http://192.168.100.89/API-ThuderMonkey/public/api";
 const char* ssid = "OI FIBRA 4955";
 const char* senha = "30140402asd*";
+const uint16_t kIrLed = 18;  // Pino GPIO do ESP8266 a ser usado. Recomendado: 4 (D2).
+IRGreeAC ac(kIrLed);
 
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP, "pool.ntp.org");
@@ -27,35 +30,28 @@ String traduzirDia(String dia) {
 }
 
 void atualizarCircuitos(int id_dp, const String& circuitosString, int id_agendamento) {
-    String url = String(baseUrl) + "/circuito/executar_comando/agendamento";
+  String url = String(baseUrl) + "/circuito/executar_comando/agendamento";
 
   // Crie um objeto JSON para enviar os dados
   DynamicJsonDocument jsonDoc(1024);
   jsonDoc["id_dp"] = id_dp;
   jsonDoc["circuitos"] = circuitosString;
   jsonDoc["id_agendamento"] = id_agendamento;
-
   // Serialize o JSON para uma String
   String jsonData;
   serializeJson(jsonDoc, jsonData);
-
   // Inicialize a requisição HTTP
   HTTPClient http;
   http.begin(url.c_str());
-
-  // Configurar o cabeçalho para indicar que é uma requisição PUT e definir o tipo de conteúdo como JSON
   http.addHeader("Content-Type", "application/json");
   int httpCode = http.PUT(jsonData);
-
-//  if (httpCode == HTTP_CODE_OK) {
-//    Serial.println("Atualização bem-sucedida!");
-//  } else {
-//    Serial.printf("Erro na atualização - Código HTTP: %d\n", httpCode);
-//  }
-
-  // Fechar a conexão
   http.end();
 }
+
+bool estadoControle;
+int tempControle;
+String modeControle;
+String ventControle;
 
 void setup() {
   Serial.begin(1200);
@@ -108,6 +104,60 @@ void setup() {
     }
 
     http.end();
+
+    String urlAirC = String(baseUrl) + "/aircontroll/recuperar_controles/1/esp32";
+    http.begin(urlAirC.c_str());
+
+    int httpCodeAirC = http.GET();
+
+    if (httpCodeAirC > 0) {
+      if (httpCodeAirC == HTTP_CODE_OK) {
+        String payload = http.getString();
+
+        DynamicJsonDocument jsonDoc(1024);
+        DeserializationError error = deserializeJson(jsonDoc, payload);
+
+        if (!error) {
+          JsonArray jsonArray = jsonDoc.as<JsonArray>();
+
+          if (jsonArray.size() > 0) {
+            JsonObject jsonObject = jsonArray[0];
+
+            String controleString = jsonObject["controles"];
+
+            DynamicJsonDocument controlDataDoc(1024);
+            DeserializationError controlDataError = deserializeJson(controlDataDoc, controleString);
+
+            if (!controlDataError) {
+              JsonArray controleArray = controlDataDoc.as<JsonArray>();
+
+              if (controleArray.size() > 0) {
+                JsonObject controleObject = controleArray[0];
+
+                estadoControle = controleObject["estado"].as<bool>();
+                tempControle = controleObject["temp"].as<int>();
+                modeControle = controleObject["mode"].as<String>();
+                ventControle = controleObject["vent"].as<String>();
+              } else {
+                Serial.println("Array de controles vazio no JSON.");
+              }
+            } else {
+              Serial.println("Erro na análise do JSON de controles.");
+            }
+          } else {
+            Serial.println("Array vazio no JSON.");
+          }
+        } else {
+          Serial.println("Erro na análise do JSON.");
+        }
+      } else {
+        Serial.printf("Erro na requisição HTTP: %d\n", httpCode);
+      }
+    } else {
+      Serial.println("Não foi possível conectar à API.");
+    }
+
+
   }
 
   timeClient.setTimeOffset(-4 * 60 * 60);
