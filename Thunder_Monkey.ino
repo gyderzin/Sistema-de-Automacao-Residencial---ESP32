@@ -10,14 +10,16 @@
 #include <TimeLib.h>
 #include <vector>
 
-const char* baseUrl = "http://192.168.100.112/API-ThuderMonkey/public/api";
+const char* baseUrl = "https://apithundermonkey.com.br/api";
 const char* ssid = "OI FIBRA 4955";
 const char* senha = "30140402asd*";
 
-const uint16_t kIrLed = 18;  // Pino GPIO do ESP8266 a ser usado. Recomendado: 4 (D2).
+const uint16_t kIrLed = 18; // Pino GPIO do ESP8266 a ser usado. Recomendado: 4 (D2).
+const uint16_t kIrLedTVBOX = 19;
 IRGreeAC acGree(kIrLed);
 IRLgAc acLG(kIrLed);
 IRsend irsend(kIrLed);
+IRsend irsendTVBOX(kIrLedTVBOX);
 
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP, "pool.ntp.org");
@@ -200,6 +202,8 @@ void setup() {
 
   timeClient.setTimeOffset(-4 * 60 * 60);
   timeClient.begin();
+  irsend.begin();
+  irsendTVBOX.begin();
 }
 
 void loop() {
@@ -445,7 +449,6 @@ void loop() {
                   String marcaControleOld = controle.marca;
                   String comandoOld = controle.comando;
                   int controleOld = controle.controle;
-                  
                   if (id == idControleOld) {
                     if (controleControle != controleOld) {
                       uint64_t codigoIR = strtoull(comandoControle.c_str(), NULL, 16);
@@ -453,8 +456,9 @@ void loop() {
                         irsend.sendSAMSUNG(codigoIR);
                       } else if (marcaDispositivo == "LG") {
                         irsend.sendNEC(codigoIR);
-                      } else if (marcaDispositivo == "Panasonic") {
-                        irsend.sendPanasonic64(codigoIR);
+                      } else if (marcaDispositivo == "TV Box") {
+                        Serial.println(codigoIR, HEX);                                    
+                        irsendTVBOX.sendNEC(codigoIR);
                       }
                       Serial.print("exec");
                       controle.controle = controleControle;
