@@ -71,7 +71,6 @@ void setup() {
 
           if (jsonArray.size() > 0) {
             for (JsonObject jsonObject : jsonArray) {
-              Serial.println("entrou aqui");
               int porta = jsonObject["porta"];
               int estado = jsonObject["estado"];
               pinMode(porta, OUTPUT);
