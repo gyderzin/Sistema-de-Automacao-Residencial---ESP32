@@ -52,23 +52,17 @@ void setup() {
     delay(1000);
     Serial.println("Conectando ao WiFi...");
   }
-
   if (WiFi.status() == WL_CONNECTED) {
     String url = String(baseUrl) + "/circuito/recuperar_circuitos/1/esp32";
     http.begin(url.c_str());
-
     int httpCode = http.GET();
-
     if (httpCode > 0) {
       if (httpCode == HTTP_CODE_OK) {
         String payload = http.getString();
-
         DynamicJsonDocument jsonDoc(1024);
         DeserializationError error = deserializeJson(jsonDoc, payload);
-
         if (!error) {
           JsonArray jsonArray = jsonDoc.as<JsonArray>();
-
           if (jsonArray.size() > 0) {
             for (JsonObject jsonObject : jsonArray) {
               int porta = jsonObject["porta"];
